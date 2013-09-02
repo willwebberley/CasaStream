@@ -23,8 +23,8 @@ def stop():
 
 @app.route("/start/")
 def start():
-#    process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
-    process = subprocess.Popen(["ls", "."])
+    process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
+#    process = subprocess.Popen(["ls", "."])
     pid = process.pid
     saveId(pid)
     return str(pid)
@@ -36,5 +36,5 @@ def info():
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
     app.debug = True 
-    port = int(os.environ.get('PORT', 9876))
+    port = int(os.environ.get('PORT', 9875))
     app.run(host='0.0.0.0', port=port)
