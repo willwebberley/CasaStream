@@ -123,6 +123,17 @@ def stop():
 @app.route("/sort-inputs/", methods=["POST", "GET"])
 def stop():
     redirectInputs()
+    return 1
+
+@app.route("/enable-slave/<host>/")
+def enable_slave(host):
+    urllib2.urlopen('http://'+host+":"+str(9875)+"/start")
+    return 1
+
+@app.route("/disable-slave/<host>/")
+def disable_slave(host):
+    urllib2.urlopen('http://'+host+":"+str(9875)+"/stop")
+    return 1
 
 
 # Main code (if invoked from Python at command line for development server)
