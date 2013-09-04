@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>CasaStream</title>
+        <link rel="stylesheet" href="/static/css/main.css">
+    </head>
+    <body>
+        <div id="main">
+
+        
+            <h1>CasaStream</h1>
+            
+            <section id="settings">
+                    <p>Initializing...</p>
+            </section>
+
+            </section>
+            
+            <section id="slaves">
+                <p>Searching for slaves...</p> 
+            </section>
+
+
+        </div>
+        <script src="/static/js/jquery.js"></script>
+        <script type="text/javascript">
+        
+        function loadListeners(){
+            $("#enable").click(function(){
+                start_stream();
+            });
+            $("#disable").click(function(){
+                stop_stream();
+            });
+            $(".enable-slave").click(function(){
+                host = $(this).attr("rel");
+                $(this).slideUp();
+                enable_slave(host);    
+            });
+            $(".disable-slave").click(function(){
+                host = $(this).attr("rel");
+                $(this).slideUp();
+                disable_slave(host);    
+            });            
+        }
+
+        function send_command(url, func){
+            $.ajax({
+                type : 'GET',
+                url : url,
+                dataType : 'json',
+                success : function(data){
+                    if(func != undefined){
+                       func(data);                 
+                    }
+                },
+                error : function(XMLHttpRequest, textStatus, errorThrown){
+                    console.log(textStatus);
+                }
+            });
+        }
+
+
+        function start_stream(data){
+            if(data == undefined){send_command("/start/", start_stream);}
+            else{
+                console.log(data);
+                get_status();
+            }
+        }       
+
+        function stop_stream(data){
+            if(data == undefined){send_command("/stop/", start_stream);}
+            else{
+                console.log(data);
+                get_status();
+            }
+        }       
+
+        function get_status(data){  
+            if(data == undefined){send_command("/status/", get_status);}
+            else{
+                console.log(data);
+                if(data['enabled'] == true){
+                    $("#settings").html('Casastream is online<br /><button id="disable">Stop</button>');           
+                }
+                if(data['enabled'] == false){
+                    $("#settings").html('Casastream is offline<br /><button id="enable">Start</button>');           
+                }
+                loadListeners();
+            }
+        }       
+
+        function scan(data){
+            if(data == undefined){send_command("/scan/", scan);}
+            else{
+                console.log(data);
+                $("#slaves").html('');
+                for(var i = 0; i < data.length; i++){
+                    s = '<div class="slave"><p>'+data[i]['zone']+' - <i>'+data[i]['host']+'</i></p>';
+                    var state = data[i]['enabled']; 
+                    if(state == true){
+                        s = s + '<button class="disable-slave" rel="'+data[i]['host']+'">Disable</button>';
+                    }
+                    if(state == false){
+                        s = s + '<button class="enable-slave" rel="'+data[i]['host']+'">Enable</button>';
+                    }
+                    s = s + '</div>';
+
+                    $("#slaves").append(s);
+                }
+                loadListeners();
+            }
+        }
+
+        function enable_slave(host){
+            send_command("/enable-slave/"+host);
+        }
+        
+        function disable_slave(host){
+            send_command("/disable-slave/"+host);
+        }
+   
+        function sort_inputs(){
+            send_command("/sort-inputs/");
+        }
+
+        get_status();
+        scan();
+        </script>
+
+    </body>
+</html>

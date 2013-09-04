@@ -1,0 +1,48 @@
+*{
+    margin:0px;
+    padding:0px;
+}
+
+body, html{
+    width:100%;
+}
+
+body{
+    background:rgb(246, 246, 244);
+}
+
+
+#main{
+    width:80%;
+    margin:20px auto;
+}
+
+
+/* CLASS STYLES */
+
+#settings{
+    background:white;
+    padding:5px;
+    border-radius:5px;
+    width:300px;
+    margin:20px 10px;
+    float:left;
+}
+
+#slaves{
+    background:white;
+    padding:5px;
+    border-radius:5px;
+    width:300px;
+    margin:20px 10px;
+    float:left
+}
+
+.slave{
+    border-bottom:1px solid #ccc;
+    margin-bottom:10px;
+    clear:both;
+}
+
+
+

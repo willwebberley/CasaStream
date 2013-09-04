@@ -1,5 +1,5 @@
 from flask import Flask, url_for, render_template, request, session, escape, redirect, g
-import os, subprocess, signal
+import os, subprocess, signal, json
 
 app = Flask(__name__)
 
@@ -15,26 +15,39 @@ def getId():
     contents = contents.replace("\n", "")
     return int(contents)
 
+def isEnabled():
+    return os.path.isfile('pid.txt')
+
+
 @app.route("/stop/")
 def stop():
     pid = getId()
     os.kill(pid, signal.SIGTERM)
+    try:
+        os.remove("pid.txt")
+    except:
+        print "pid.txt does not exist"
     return "stopped"
 
 @app.route("/start/")
 def start():
     process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
-#    process = subprocess.Popen(["ls", "."])
     pid = process.pid
     saveId(pid)
     return str(pid)
 
+
 @app.route("/info/")
 def info():
-    return "living room"
+    enabled = isEnabled()
+    return json.dumps({"zone":"living room","enabled":enabled})
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
+    try:
+        os.remove("pid.txt")
+    except:
+        print "pid.txt does not exist"
     app.debug = True 
-    port = int(os.environ.get('PORT', 9875))
+    port = 9875
     app.run(host='0.0.0.0', port=port)

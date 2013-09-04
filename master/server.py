@@ -1,5 +1,5 @@
 from flask import Flask, url_for, render_template, request, session, escape, redirect, g
-import os, nmap, subprocess, signal, urllib2
+import os, nmap, subprocess, signal, urllib2, json
 
 app = Flask(__name__)
 
@@ -14,16 +14,21 @@ def search():
         if nm[h]['tcp'][9875]['state'] == 'open':
             up_hosts.append(str(h))
 
-    zone_dict = {}
+    zone_list = []
     for host in up_hosts:
         try:
             response = urllib2.urlopen('http://'+host+":"+str(9875)+"/info")
             zone = response.read()
-            zone_dict[host] = zone
+            zone_info = json.loads(zone)
+            zone_dict = {}
+            zone_dict['host'] = host
+            zone_dict['zone'] = zone_info['zone']
+            zone_dict['enabled'] = zone_info['enabled']
+            zone_list.append(zone_dict)
         except Exception as e:
             print "error:",host, e
 
-    return zone_dict
+    return zone_list
 
 
 def saveIds(mod1, mod2, pid):
@@ -35,7 +40,7 @@ def getIds():
     f = open("modules.txt", "r")
     contents = f.read()
     contents = contents.replace("\n", "")
-    tokens = contens.split(",")
+    tokens = contents.split(",")
     return (int(tokens[0]),int(tokens[1]),int(tokens[2]))
     
 def startStream():
@@ -52,6 +57,9 @@ def startStream():
     # Use VLC to encode stream to MP3 and then broadcast through RTP
     start_vlc_encoder = subprocess.Popen(['cvlc', 'rtp://@127.0.0.1:46998', '":sout=#transcode{acodec=mp3,ab=256,channels=2}:duplicate{dst=rtp{dst=225.0.0.1,mux=ts,port=12345}}'])
     pid = start_vlc_encoder.pid
+    
+    print "started PA modules and encoder"
+    redirectInputs()
 
     # Save PA module IDs and the VLC process ID (so they can be killed later)
     saveIds(out, out2, pid)
@@ -68,6 +76,12 @@ def endStream():
     # Kill VLC process
     os.kill(pid, signal.SIGTERM)
 
+    try:
+        os.remove("modules.txt")
+    except:
+        print "settings file does not exist"
+
+
 
 def redirectInputs():
     # First, get the id of the casastream RTP sink
@@ -78,8 +92,9 @@ def redirectInputs():
     for line in lines:
         tokens = line.split()
         for token in tokens:
-            if token == 'rtp':
+            if token == 'casastream':
                 sink_id = tokens[0]
+
 
 
     # Next, get the IDs of all current inputs
@@ -96,48 +111,57 @@ def redirectInputs():
     for i in inputs:
         subprocess.Popen(["pactl","move-sink-input",str(i),str(sink_id)])
         
-
+def isEnabled():
+    return os.path.isfile('modules.txt')
 
 @app.route("/")
 def home():
-    return "test"
+    return render_template('home.html')
 
 @app.route("/scan/", methods=["POST", "GET"])
 def scan():
     zones = search()
-    text = ""
-    for zone in zones:
-        text = text + zone + ":" + zones[zone]+"<br />"
-    return text
+    return json.dumps(zones)
 
 @app.route("/start/", methods=["POST", "GET"])
 def start():
     startStream()
-    return "started"
+    return json.dumps({"started":True})
 
 @app.route("/stop/", methods=["POST", "GET"])
 def stop():
     endStream()
-    return "stopped"
+    return json.dumps({'stopped':True})
+
+@app.route("/status/", methods=["POST", "GET"])
+def status():
+    enabled = isEnabled()
+    return json.dumps({'enabled':enabled})
 
 @app.route("/sort-inputs/", methods=["POST", "GET"])
-def stop():
+def sort_inputs():
     redirectInputs()
-    return 1
+    return json.dumps({'success': 'true'})
+
 
 @app.route("/enable-slave/<host>/")
 def enable_slave(host):
     urllib2.urlopen('http://'+host+":"+str(9875)+"/start")
-    return 1
+    return json.dumps({'success': 'true'})
 
 @app.route("/disable-slave/<host>/")
 def disable_slave(host):
     urllib2.urlopen('http://'+host+":"+str(9875)+"/stop")
-    return 1
+    return json.dumps({'success': 'true'})
+
 
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
+    try:
+        os.remove("modules.txt")
+    except:
+        print "settings file does not exist" 
     app.debug = True 
     port = 9878
     app.run(host='0.0.0.0', port=port)
