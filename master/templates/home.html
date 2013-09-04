@@ -60,7 +60,24 @@
                 }
             });
         }
-
+        
+        function update_slave(type, slave){
+            url = "disable-slave/"+slave;
+            if(type == 1){url = "/enable-slave/"+slave;}
+            $.ajax({
+                type : 'GET',
+                url : url,
+                dataType : 'json',
+                success : function(data){
+                    if(func != undefined){
+                       func(data);                 
+                    }
+                },
+                error : function(XMLHttpRequest, textStatus, errorThrown){
+                    console.log(textStatus);
+                }
+            });
+        }
 
         function start_stream(data){
             if(data == undefined){send_command("/start/", start_stream);}

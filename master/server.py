@@ -55,7 +55,7 @@ def startStream():
     out2, err2 = create_rtp_process.communicate()
 
     # Use VLC to encode stream to MP3 and then broadcast through RTP
-    start_vlc_encoder = subprocess.Popen(['cvlc', 'rtp://@127.0.0.1:46998', '":sout=#transcode{acodec=mp3,ab=256,channels=2}:duplicate{dst=rtp{dst=225.0.0.1,mux=ts,port=12345}}'])
+    start_vlc_encoder = subprocess.Popen(['cvlc', 'rtp://@127.0.0.1:46998', ':sout=#transcode{acodec=mp3,ab=256,channels=2}:duplicate{dst=rtp{dst=225.0.0.1,mux=ts,port=12345}}'])
     pid = start_vlc_encoder.pid
     
     print "started PA modules and encoder"
