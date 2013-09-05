@@ -1,3 +1,17 @@
+@font-face {
+  font-family: 'PT Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: local('PT Sans'), local('PTSans-Regular'), url(http://themes.googleusercontent.com/static/fonts/ptsans/v5/LKf8nhXsWg5ybwEGXk8UBQ.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Bubbler One';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Bubbler One'), local('BubblerOne'), url(http://themes.googleusercontent.com/static/fonts/bubblerone/v1/tiAxK_A8SViEcY0M590QMIbN6UDyHWBl620a-IRfuBk.woff) format('woff');
+}
+
 *{
     margin:0px;
     padding:0px;
@@ -11,38 +25,106 @@ body{
     background:rgb(246, 246, 244);
 }
 
+header{
+    border-top:10px solid #00BFFF;
+    width:100%;
+    background:rgba(20,20,20,0.6);
+}
+
 
 #main{
     width:80%;
     margin:20px auto;
 }
 
+p{
+    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
+    font-size:16px;
+    margin:10px 0px;
+}
+
+h2{
+    color:#aaa;
+    padding-bottom:15px;
+    border-bottom:2px solid #00BFFF;
+    font-weight:lighter;
+}
+
+/* HEADER STUFF */
+
+#title{
+    font-family:'Bubbler One', 'Helvetica', 'Sans-serif';
+    font-size:40px;
+    color:#00BFFF;
+    margin-left:100px;
+    margin-top:0px;
+    margin-bottom:0px;
+}
+
 
 /* CLASS STYLES */
 
-#settings{
-    background:white;
-    padding:5px;
-    border-radius:5px;
-    width:300px;
-    margin:20px 10px;
-    float:left;
+.link{
+    color:#00BFFF;
+    cursor:pointer;
+}
+.link:hover{text-decoration:underline;}
+
+#master-enable{
+    display:block;
+    margin:10px auto;
+    opacity:0.3;
 }
 
-#slaves{
-    background:white;
-    padding:5px;
+
+section{
     border-radius:5px;
-    width:300px;
-    margin:20px 10px;
-    float:left
+    width:90%;
+    margin:20px auto;
+    clear:left;
+}
+
+section.half{
+    padding:0% 2%;
+    width:46%;
+    float:left;
+    clear:none;
+    display:inline;
+}
+
+section h2{
+    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
+    margin-top:10px;
+    margin-bottom:20px;
+}
+
+#status button{
+    float:right;
+}
+
+#status .online{
+    color:green;
+}
+
+#status .offline{
+    color:red;
 }
 
 .slave{
+    display:block;
     border-bottom:1px solid #ccc;
     margin-bottom:10px;
+    padding:5px;
+    background:rgba(20,20,20,0.6);
     clear:both;
 }
 
+.slave button{
+    float:right;
+}
 
+.slave p{
+    float:left;
+    color:#00BFFF;
+}
 

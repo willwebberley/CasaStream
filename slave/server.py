@@ -21,20 +21,24 @@ def isEnabled():
 
 @app.route("/stop/")
 def stop():
-    pid = getId()
-    os.kill(pid, signal.SIGTERM)
-    try:
-        os.remove("pid.txt")
-    except:
-        print "pid.txt does not exist"
-    return "stopped"
+    if isEnabled():
+            pid = getId()
+            os.kill(pid, signal.SIGTERM)
+            try:
+                os.remove("pid.txt")
+            except:
+                print "pid.txt does not exist"
+            return "stopped"
+    return False
 
 @app.route("/start/")
 def start():
-    process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
-    pid = process.pid
-    saveId(pid)
-    return str(pid)
+    if not isEnabled():
+        process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
+        pid = process.pid
+        saveId(pid)
+        return "started"
+    return False
 
 
 @app.route("/info/")

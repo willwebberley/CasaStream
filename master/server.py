@@ -59,7 +59,7 @@ def startStream():
     pid = start_vlc_encoder.pid
     
     print "started PA modules and encoder"
-    redirectInputs()
+    redirectAllInputs()
 
     # Save PA module IDs and the VLC process ID (so they can be killed later)
     saveIds(out, out2, pid)
@@ -82,9 +82,7 @@ def endStream():
         print "settings file does not exist"
 
 
-
-def redirectInputs():
-    # First, get the id of the casastream RTP sink
+def getCasaStreamSinkId():
     pa_sinks_process = subprocess.Popen(["pactl","list","short","sinks"], stdout = subprocess.PIPE)
     out1, err1 = pa_sinks_process.communicate()
     lines = out1.split("\n")
@@ -93,9 +91,12 @@ def redirectInputs():
         tokens = line.split()
         for token in tokens:
             if token == 'casastream':
-                sink_id = tokens[0]
+                return int(tokens[0])
+ 
 
-
+def redirectAllInputs():
+    # First, get the id of the casastream RTP sink
+    sink_id = getCasaStreamSinkId()    
 
     # Next, get the IDs of all current inputs
     pa_inputs_process = subprocess.Popen(["pactl","list","short","sink-inputs"], stdout = subprocess.PIPE)
@@ -110,7 +111,59 @@ def redirectInputs():
     # Finally, move each input to our own sink
     for i in inputs:
         subprocess.Popen(["pactl","move-sink-input",str(i),str(sink_id)])
-        
+
+
+def redirectInputs(inputs_to_redirect):
+    # First, get the id of the casastream RTP sink
+    sink_id = getCasaStreamSinkId()  
+
+    # Get all inputs (not just those selected)
+    all_inputs = getAllInputs()
+    
+    # Calculate which sink to send sources to which ARENT chosen:
+    standard_sink = 0
+    if sink_id == 0:
+        standard_sink = 1    
+
+    # Finally, move each requested input to our own sink and others to the standard_sink
+    for input in all_inputs:
+        id = input['id']
+        if id in inputs_to_redirect:
+            subprocess.Popen(["pactl","move-sink-input",str(input),str(sink_id)])
+        else:
+            subprocess.Popen(["pactl","move-sink-input",str(input),str(standard_sink)])
+
+
+def getAllInputs():
+    pa_sinks_process = subprocess.Popen(["pactl","list","sink-inputs"], stdout = subprocess.PIPE)
+    out1, err1 = pa_sinks_process.communicate()
+    lines = out1.split("\n")
+    inputs = []
+    current_id = 1
+    current_correct_sink = False
+    sink_id = getCasaStreamSinkId()
+    for line in lines:
+        if "Sink Input" in line:
+            tokens = line.split()
+            for token in tokens:
+                if "#" in token:            
+                    current_id = int(token.replace("#",""))
+        if "application.name" in line:
+            tokens = line.split('"')
+            name = tokens[1].replace('"','')
+            if not "vlc" in name.lower():
+                inputs.append({"id":current_id,"name":name,"casastream":current_correct_sink})
+        if "Sink: " in line:
+            tokens = line.split()
+            if int(tokens[1]) == sink_id:
+                current_correct_sink = True
+            else:
+                current_correct_sink == False            
+
+    return inputs
+                
+    
+   
 def isEnabled():
     return os.path.isfile('modules.txt')
 
@@ -136,11 +189,16 @@ def stop():
 @app.route("/status/", methods=["POST", "GET"])
 def status():
     enabled = isEnabled()
-    return json.dumps({'enabled':enabled})
+    inputs = getAllInputs()
+    return json.dumps({'enabled':enabled, "inputs":inputs})
 
-@app.route("/sort-inputs/", methods=["POST", "GET"])
-def sort_inputs():
-    redirectInputs()
+@app.route("/sort-inputs/<inputs>", methods=["POST", "GET"])
+def sort_inputs(inputs):
+    tokens = inputs.split(",")
+    input_list = []
+    for token in tokens:
+        input_list.append(int(token))
+    redirectInputs(input_list)
     return json.dumps({'success': 'true'})
 
 
