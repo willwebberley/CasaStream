@@ -75,10 +75,10 @@
                 var sources = "";
                 $(".toggle_source").each(function(){
                     if($(this).is(':checked')){
-                        source = source+$(this).attr("rel");
+                        sources = sources+$(this).attr("rel");
                     }
                 });                              
-                sort_inputs(); 
+                sort_inputs(sources); 
             });    
             $("#rescan").click(function(event){
                 event.stopImmediatePropagation();
@@ -141,7 +141,11 @@
                 s = "";
                 for(var i = 0; i < data['inputs'].length; i++){
                      s = s + '<li class="slave"><p>'+data['inputs'][i]['name']+'</p>';
-                     s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source" checked rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
+                     s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source"';
+		     if(data['inputs'][i]['casastream'] == true){		
+ 			s = s + 'checked'; 
+		     }
+		     s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
                     s = s + '<div style="clear:both"></div></li>';
                 }
                 $("#sources").html(s);
@@ -154,8 +158,8 @@
                     enabled = false;
                     $("#status").html('<span class="offline">offline</span><button id="enable">Start</button>');           
                     $("#info").html('To start streaming over the network, please enable CasaStream.');
-                    $("#sources").html('Please enable CasaStream to get started.');
-                    $("#slaves").html('Please enable CasaStream to get started.');
+       //             $("#sources").html('Please enable CasaStream to get started.');
+        //            $("#slaves").html('Please enable CasaStream to get started.');
                 }
                 loadListeners();
             }
@@ -191,8 +195,8 @@
             update_slave(0, host);
         }
    
-        function sort_inputs(){
-            send_command("/sort-inputs/");
+        function sort_inputs(inputs){
+            send_command("/sort-inputs/"+inputs+"/");
         }
 
         setInterval(function(){

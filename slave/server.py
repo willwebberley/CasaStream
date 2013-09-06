@@ -29,7 +29,7 @@ def stop():
             except:
                 print "pid.txt does not exist"
             return "stopped"
-    return False
+    return "unable to stop"
 
 @app.route("/start/")
 def start():
@@ -38,7 +38,7 @@ def start():
         pid = process.pid
         saveId(pid)
         return "started"
-    return False
+    return "unable to start"
 
 
 @app.route("/info/")

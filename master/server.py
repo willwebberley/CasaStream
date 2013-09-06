@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 def search():
     nm = nmap.PortScanner()
-    nm.scan(hosts='192.168.1.0-10', arguments='-p 9875')
+    nm.scan(hosts='192.168.1.0-20', arguments='-p 9875')
    
     up_hosts = [] 
     for h in nm.all_hosts():
@@ -59,7 +59,7 @@ def startStream():
     pid = start_vlc_encoder.pid
     
     print "started PA modules and encoder"
-    redirectAllInputs()
+    #redirectAllInputs()
 
     # Save PA module IDs and the VLC process ID (so they can be killed later)
     saveIds(out, out2, pid)
@@ -129,9 +129,11 @@ def redirectInputs(inputs_to_redirect):
     for input in all_inputs:
         id = input['id']
         if id in inputs_to_redirect:
-            subprocess.Popen(["pactl","move-sink-input",str(input),str(sink_id)])
+	    print "moving input "+str(input)+" to sink "+str(sink_id)
+            subprocess.Popen(["pactl","move-sink-input",str(input['id']),str(sink_id)])
         else:
-            subprocess.Popen(["pactl","move-sink-input",str(input),str(standard_sink)])
+            print "moving input "+str(input)+" to sink "+str(standard_sink)
+            subprocess.Popen(["pactl","move-sink-input",str(input['id']),str(standard_sink)])
 
 
 def getAllInputs():
@@ -192,7 +194,13 @@ def status():
     inputs = getAllInputs()
     return json.dumps({'enabled':enabled, "inputs":inputs})
 
-@app.route("/sort-inputs/<inputs>", methods=["POST", "GET"])
+@app.route("/sort-inputs/")
+def remove_inputs():
+	input_list = []
+	redirect_inputs(input_list)
+	return json.dumps({'success':'true'})
+
+@app.route("/sort-inputs/<inputs>/", methods=["POST", "GET"])
 def sort_inputs(inputs):
     tokens = inputs.split(",")
     input_list = []
