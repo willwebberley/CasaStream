@@ -1,5 +1,7 @@
-CasaStream
+CasaStream v1.0
 =================
+
+**License:** GNU General Public License
 
 
 TL;DR
