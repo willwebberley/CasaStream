@@ -144,6 +144,9 @@ def getAllInputs():
     current_id = 1
     current_correct_sink = False
     sink_id = getCasaStreamSinkId()
+    current_sink_id = 1
+    print "casastream's sink ID:",sink_id
+
     for line in lines:
         if "Sink Input" in line:
             tokens = line.split()
@@ -154,9 +157,14 @@ def getAllInputs():
             tokens = line.split('"')
             name = tokens[1].replace('"','')
             if not "vlc" in name.lower():
-                inputs.append({"id":current_id,"name":name,"casastream":current_correct_sink})
+                print name+"'s sink ID:",current_sink_id
+                if current_sink_id == sink_id:
+	                inputs.append({"id":current_id,"name":name,"casastream":True})
+                else:
+                         inputs.append({"id":current_id,"name":name,"casastream":False})
         if "Sink: " in line:
             tokens = line.split()
+            current_sink_id = int(tokens[1])
             if int(tokens[1]) == sink_id:
                 current_correct_sink = True
             else:
@@ -197,7 +205,7 @@ def status():
 @app.route("/sort-inputs/")
 def remove_inputs():
 	input_list = []
-	redirect_inputs(input_list)
+	redirectInputs(input_list)
 	return json.dumps({'success':'true'})
 
 @app.route("/sort-inputs/<inputs>/", methods=["POST", "GET"])
@@ -205,7 +213,10 @@ def sort_inputs(inputs):
     tokens = inputs.split(",")
     input_list = []
     for token in tokens:
-        input_list.append(int(token))
+        try:
+            input_list.append(int(token))
+        except Exception:
+            continue
     redirectInputs(input_list)
     return json.dumps({'success': 'true'})
 

@@ -32,15 +32,15 @@
                 <h2>CasaStream zones</h2>
                 <p>Select zones to receive CasaStream's broadcast. <span class="link" id="rescan">Re-scan</span></p>
                 <ul id="slaves">
-                    <p>Searching for zones...</p> 
+                    <p><i>Searching for zones...</i></p> 
                 </ul>
             </section>
 
             <section class="half">
                 <h2>Sound sources</h2>
-                <p>Select the sound sources you want CasaStream to broadcast.</p>
+                <p>Select applications you want CasaStream to broadcast. Applications can take up to 10 seconds to be discovered by CasaStream.</p>
                 <ul id="sources">
-                    <p>Searching for sources...</p>
+                    <p><i>Searching for sources...</i></p>
                 </ul>
             </section>
 
@@ -75,7 +75,7 @@
                 var sources = "";
                 $(".toggle_source").each(function(){
                     if($(this).is(':checked')){
-                        sources = sources+$(this).attr("rel");
+                        sources = sources+$(this).attr("rel")+",";
                     }
                 });                              
                 sort_inputs(sources); 
@@ -137,29 +137,30 @@
         function get_status(data){  
             if(data == undefined){send_command("/status/", get_status);}
             else{
-                $("#master-enable").stop().animate({opacity:'1.0'}, 300);
-                s = "";
-                for(var i = 0; i < data['inputs'].length; i++){
-                     s = s + '<li class="slave"><p>'+data['inputs'][i]['name']+'</p>';
-                     s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source"';
-		     if(data['inputs'][i]['casastream'] == true){		
- 			s = s + 'checked'; 
-		     }
-		     s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
-                    s = s + '<div style="clear:both"></div></li>';
-                }
-                $("#sources").html(s);
+		console.log(data);
                 if(data['enabled'] == true){
+		    
                     enabled = true;
                     $("#master_toggle").attr('checked','checked');
                     $("#info").html('CasaStream is now broadcasting over the network.');
+		    $("#master-enable").stop().animate({opacity:'1.0'}, 300);
+                    s = "";
+                    for(var i = 0; i < data['inputs'].length; i++){
+                        s = s + '<li class="slave"><p>'+data['inputs'][i]['name']+'</p>';
+                        s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source"';
+		        if(data['inputs'][i]['casastream'] == true){		
+ 			    s = s + 'checked '; 
+		        }
+		        s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
+                        s = s + '<div style="clear:both"></div></li>';
+                    }
+                    $("#sources").html(s);
                 }
                 if(data['enabled'] == false){
                     enabled = false;
                     $("#status").html('<span class="offline">offline</span><button id="enable">Start</button>');           
                     $("#info").html('To start streaming over the network, please enable CasaStream.');
-       //             $("#sources").html('Please enable CasaStream to get started.');
-        //            $("#slaves").html('Please enable CasaStream to get started.');
+                    $("#sources").html('Please enable CasaStream to detect sources.');
                 }
                 loadListeners();
             }
@@ -196,7 +197,7 @@
         }
    
         function sort_inputs(inputs){
-            send_command("/sort-inputs/"+inputs+"/");
+            send_command("/sort-inputs/"+inputs);
         }
 
         setInterval(function(){
