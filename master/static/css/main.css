@@ -140,18 +140,25 @@ section.half{
 
 .slave button{
     width:100px;
-    color:white;
+    color:#aaa;
     border:1px solid #ccc;
     background:rgba(0,0,0,0.7);
     cursor:pointer;
     font-size:17px;
     position:relative;
+    text-transform:uppercase;
 }
 .slave button:hover{color:#00BFFF;}
 
-.slave p{
-    float:left;
-    color:#00BFFF;
-    position:relative;
+.slave h3{
+    margin-bottom:5px;
+    padding-bottom:0px;
+    color:#222;
+    display:block;
+    padding-bottom:5px;
 }
 
+.slave .info-label{
+    font-style:italic;
+    color:#00BFFF;
+}

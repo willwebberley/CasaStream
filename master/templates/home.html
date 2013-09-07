@@ -50,6 +50,7 @@
         <script type="text/javascript">
 
         var enabled = false;
+
  
         function loadListeners(){
            $("#master_toggle").click(function(event){
@@ -84,7 +85,15 @@
                 event.stopImmediatePropagation();
                 $("#rescan").html('');
                 scan();
-            });    
+            });   
+
+            $(".rename").click(function(event){
+                event.stopImmediatePropagation();
+                var name=prompt("Enter a new name for this zone:","");
+                var slave = $(this).attr("rel");
+                rename_slave(slave, name);
+            });   
+
         }
 
         function send_command(url, func){
@@ -136,30 +145,31 @@
         function get_status(data){  
             if(data == undefined){send_command("/status/", get_status);}
             else{
-		console.log(data);
+                $("#master-enable").stop().animate({opacity:'1.0'}, 300);
                 if(data['enabled'] == true){
-		    
                     enabled = true;
                     $("#master_toggle").attr('checked','checked');
                     $("#info").html('CasaStream is now broadcasting over the network.');
-		    $("#master-enable").stop().animate({opacity:'1.0'}, 300);
+                    $("#sources").html("<p><i>No sources could be found. Ensure your application is running and that PulseAudio can detect it!</i></p>");
                     s = "";
                     for(var i = 0; i < data['inputs'].length; i++){
                         s = s + '<li class="slave"><p>'+data['inputs'][i]['name']+'</p>';
                         s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source"';
-		        if(data['inputs'][i]['casastream'] == true){		
- 			    s = s + 'checked '; 
-		        }
-		        s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
-                        s = s + '<div style="clear:both"></div></li>';
+                        if(data['inputs'][i]['casastream'] == true){		
+                            s = s + 'checked '; 
+                        }
+                        s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
+                                s = s + '<div style="clear:both"></div></li>';
                     }
-                    $("#sources").html(s);
+                    if(data['inputs'].length > 0){
+                        $("#sources").html(s);
+                    }
                 }
                 if(data['enabled'] == false){
                     enabled = false;
                     $("#status").html('<span class="offline">offline</span><button id="enable">Start</button>');           
                     $("#info").html('To start streaming over the network, please enable CasaStream.');
-                    $("#sources").html('Please enable CasaStream to detect sources.');
+                    $("#sources").html('<p><i>Please enable CasaStream to detect sources.</i></p>');
                 }
                 loadListeners();
             }
@@ -171,9 +181,11 @@
                 send_command("/scan/", scan);
             }
             else{
-                $("#slaves").html('');
+                $("#slaves").html('<p><i>No zones have been found. Ensure slaves servers are running and try to re-scan.</i></p>');
+                s = "";
                 for(var i = 0; i < data.length; i++){
-                    s = '<li class="slave">';
+                    console.log(data[i]);
+                    s = s + '<li class="slave">';
                     var state = data[i]['enabled'];
                     s = s + '<div class="settings">'; 
                     if(state == true){
@@ -182,9 +194,12 @@
                     if(state == false){
                         s = s + '<label class="checkbox toggle android" onclick=""><input type="checkbox" class="toggle_slave" rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';    
                     }
-                    s = s + '<button id="rename" rel="'+data[i]['host']+'">rename</button></div>';
-                    s = s + '<p>'+data[i]['zone']+' - <i>'+data[i]['host']+'</i></p><div style="clear:both"></div></li>';
-                    $("#slaves").append(s);
+                    s = s + '<button class="rename" rel="'+data[i]['host']+'">rename</button></div>';
+                    s = s + '<h3>'+data[i]['zone'].replace("~"," ")+'</h3>';
+                    s = s + '<p><span class="info-label">'+data[i]['info'][1]+'</span> ('+data[i]['info'][0]+' '+data[i]['info'][2]+') - <span class="info-label">'+data[i]['host']+'</span></p><div style="clear:both"></div></li>';
+                }
+                if(data.length > 0){
+                    $("#slaves").html(s);
                 }
                 $("#rescan").html('Re-scan');
                 loadListeners();
@@ -202,9 +217,23 @@
         function sort_inputs(inputs){
             send_command("/sort-inputs/"+inputs);
         }
+        function rename_slave(slave, name){
+            name = name.replace(" ", "~")
+            send_command("/rename-slave/"+slave+"/"+name);
+            $.ajax({
+                type : 'GET',
+                url : "/rename-slave/"+slave+"/"+name,
+                dataType : 'json',
+                success : function(data){
+                    scan();
+                },
+                error : function(XMLHttpRequest, textStatus, errorThrown){
+                    console.log(textStatus);
+                }
+            });
 
+        }
         setInterval(function(){
-        //    scan();
             get_status();
         }, 10000);
 

@@ -65,10 +65,10 @@ def search():
             zone_dict['host'] = host
             zone_dict['zone'] = zone_info['zone']
             zone_dict['enabled'] = zone_info['enabled']
+            zone_dict['info'] = zone_info['info'] 
             zone_list.append(zone_dict)
         except Exception as e:
             print "error:",host, e
-
     return zone_list
 
 # Load the relevant PA modules to start the stream to localhost, and VLC to encode the stream to MP3.
@@ -283,6 +283,10 @@ def disable_slave(host):
     urllib2.urlopen('http://'+host+":"+str(9875)+"/stop")
     return json.dumps({'success': 'true'})
 
+@app.route("/rename-slave/<host>/<name>/")
+def rename_slave(host, name):
+    urllib2.urlopen('http://'+host+":"+str(9875)+"/rename/"+name)
+    return json.dumps({'success': 'true'})
 
 
 # Main code (if invoked from Python at command line for development server)

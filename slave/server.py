@@ -10,7 +10,7 @@ def getConfig():
     try:
         config = open(config_file, "r").read()
         config = json.loads(config)
-        name = int(config['name'])
+        name = str(config['name'])
     except Exception as e:
         print "Could not parse config file. You may need to restart the server. Writing new..."
         config = initConfig()
@@ -19,11 +19,13 @@ def getConfig():
 def writeConfig(config):
     f = open(config_file, "w")
     f.write(json.dumps(config))
+    print "written config"
     f.close()
 
 def initConfig():
     config = {"name":"Un-named zone"}
     writeConfig(config)
+    return config
 
 def saveId(pid):
     f = open("pid.txt", "w")
@@ -61,13 +63,20 @@ def start():
         return "started"
     return "unable to start"
 
+@app.route("/rename/<name>/")
+def rename(name):
+    config = getConfig()
+    config['name'] = name
+    writeConfig(config)
+    return "success"
 
 @app.route("/info/")
 def info():
     config = getConfig()
+    sys_info = os.uname()
     name = config['name']
     enabled = isEnabled()
-    return json.dumps({"zone":name,"enabled":enabled})
+    return json.dumps({"zone":name,"enabled":enabled,"info":sys_info})
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
