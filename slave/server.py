@@ -2,7 +2,28 @@ from flask import Flask, url_for, render_template, request, session, escape, red
 import os, subprocess, signal, json
 
 app = Flask(__name__)
+config_file = "config.json"
 
+# Load the configuration from file
+def getConfig():
+    config = None
+    try:
+        config = open(config_file, "r").read()
+        config = json.loads(config)
+        name = int(config['name'])
+    except Exception as e:
+        print "Could not parse config file. You may need to restart the server. Writing new..."
+        config = initConfig()
+    return config
+              
+def writeConfig(config):
+    f = open(config_file, "w")
+    f.write(json.dumps(config))
+    f.close()
+
+def initConfig():
+    config = {"name":"Un-named zone"}
+    writeConfig(config)
 
 def saveId(pid):
     f = open("pid.txt", "w")
@@ -43,8 +64,10 @@ def start():
 
 @app.route("/info/")
 def info():
+    config = getConfig()
+    name = config['name']
     enabled = isEnabled()
-    return json.dumps({"zone":"living room","enabled":enabled})
+    return json.dumps({"zone":name,"enabled":enabled})
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':

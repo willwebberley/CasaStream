@@ -25,7 +25,7 @@
                     <a class="slide-button"></a>
                 </label>
                    
-                    <p id="info">Please wait while the system gets started.</p>
+                <h3 id="info">Please wait while the system gets started.</h3>
             </section>
 
             <section class="half">
@@ -82,8 +82,7 @@
             });    
             $("#rescan").click(function(event){
                 event.stopImmediatePropagation();
-                $("#rescan").html('scanning... (please wait)');
-                $("#rescan").removeClass("link");
+                $("#rescan").html('');
                 scan();
             });    
         }
@@ -167,23 +166,27 @@
         }       
 
         function scan(data){
-            if(data == undefined){send_command("/scan/", scan);}
+            if(data == undefined){
+                $("#slaves").html('<p><i>Searching for zones...</i></p>');
+                send_command("/scan/", scan);
+            }
             else{
                 $("#slaves").html('');
                 for(var i = 0; i < data.length; i++){
-                    s = '<li class="slave"><p>'+data[i]['zone']+' - <i>'+data[i]['host']+'</i></p>';
-                    var state = data[i]['enabled']; 
+                    s = '<li class="slave">';
+                    var state = data[i]['enabled'];
+                    s = s + '<div class="settings">'; 
                     if(state == true){
-                       s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_slave" checked rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
+                       s = s + '<label class="checkbox toggle android" onclick=""><input type="checkbox" class="toggle_slave" checked rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
                     }
                     if(state == false){
-                        s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_slave" rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';    
+                        s = s + '<label class="checkbox toggle android" onclick=""><input type="checkbox" class="toggle_slave" rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';    
                     }
-                    s = s + '<div style="clear:both"></div></li>';
-                    $("#rescan").html('Re-scan');
-                    $("#rescan").addClass("link");
+                    s = s + '<button id="rename" rel="'+data[i]['host']+'">rename</button></div>';
+                    s = s + '<p>'+data[i]['zone']+' - <i>'+data[i]['host']+'</i></p><div style="clear:both"></div></li>';
                     $("#slaves").append(s);
                 }
+                $("#rescan").html('Re-scan');
                 loadListeners();
             }
         }

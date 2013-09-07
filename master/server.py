@@ -2,15 +2,56 @@ from flask import Flask, url_for, render_template, request, session, escape, red
 import os, nmap, subprocess, signal, urllib2, json
 
 app = Flask(__name__)
+config_file = "config.json"
+
+# Load the configuration from file
+def getConfig():
+    config = None
+    try:
+        config = open(config_file, "r").read()
+        config = json.loads(config)
+        pa_sink_id = int(config['pa_sink_id'])
+        pa_rtp_id = int(config['pa_rtp_id'])
+        vlc_pid = int(config['vlc_pid'])
+    except Exception as e:
+        print "Could not parse config file. You may need to restart the server. Writing new..."
+        config = initConfig()
+    return config
+
+# Write a new configuration to file
+def writeConfig(config):
+    f = open(config_file, "w")
+    f.write(json.dumps(config))
+    f.close()
+
+# Initialise the config file to initial starting values
+def initConfig():
+    config = {"pa_sink_id":-567,"pa_rtp_id":-567,"vlc_pid":-567, "enabled": 0}
+    writeConfig(config)
+    return config
 
 
+# Save the PA module IDs and the VLC process ID to the config
+def saveIds(mod1, mod2, pid):
+    config = getConfig()
+    config['pa_sink_id'] = int(mod1)
+    config['pa_rtp_id'] = int(mod2)
+    config['vlc_pid'] = int(pid)
+    config['enabled'] = 1
+    writeConfig(config)
+
+# Get the PA module IDs and the VlC process ID from the config
+def getIds():
+    config = getConfig()
+    return ((config['pa_sink_id'], config['pa_rtp_id'], config['vlc_pid']))
+ 
+# Perform a scan over the network for slaves. Returns list of a dictionary of slaves
 def search():
     nm = nmap.PortScanner()
     nm.scan(hosts='192.168.1.0-20', arguments='-p 9875')
    
     up_hosts = [] 
     for h in nm.all_hosts():
-    #    print h,nm[h]['tcp'][9875]['state']
         if nm[h]['tcp'][9875]['state'] == 'open':
             up_hosts.append(str(h))
 
@@ -30,22 +71,8 @@ def search():
 
     return zone_list
 
-
-def saveIds(mod1, mod2, pid):
-    f = open("modules.txt", "w")
-    f.write(str(mod1)+","+str(mod2)+","+str(pid))
-    f.close()
-
-def getIds():
-    f = open("modules.txt", "r")
-    contents = f.read()
-    contents = contents.replace("\n", "")
-    tokens = contents.split(",")
-    return (int(tokens[0]),int(tokens[1]),int(tokens[2]))
-    
+# Load the relevant PA modules to start the stream to localhost, and VLC to encode the stream to MP3.
 def startStream():
-    # enable the relevant PulseAudio modules
-
     # Create a sink to receive our sound
     create_sink_process = subprocess.Popen(["pactl","load-module", "module-null-sink","sink_name=casastream","format=s16be","channels=2","rate=44100"], stdout=subprocess.PIPE)
     out, err = create_sink_process.communicate()    
@@ -59,29 +86,27 @@ def startStream():
     pid = start_vlc_encoder.pid
     
     print "started PA modules and encoder"
-    #redirectAllInputs()
 
-    # Save PA module IDs and the VLC process ID (so they can be killed later)
+    # Save PA module IDs and the VLC process ID (so they can be killed if CasaStream is disabled)
     saveIds(out, out2, pid)
         
-
+# Unload the relevant modules and kill the VLC process to disable the server
 def endStream():
     # Retrieve PA module IDs and the VLC process ID
     mod1, mod2, pid = getIds()
     
+    print "pactl unload-module "+str(mod1)
+    print "pactl unload-module "+str(mod2)    
     # Kill PA modules
     subprocess.Popen(["pactl","unload-module",str(mod1)])
     subprocess.Popen(["pactl","unload-module",str(mod2)])
 
     # Kill VLC process
     os.kill(pid, signal.SIGTERM)
+    
+    initConfig() 
 
-    try:
-        os.remove("modules.txt")
-    except:
-        print "settings file does not exist"
-
-
+# Return an integer representing the ID of casastream's audio sink (if it exists)
 def getCasaStreamSinkId():
     pa_sinks_process = subprocess.Popen(["pactl","list","short","sinks"], stdout = subprocess.PIPE)
     out1, err1 = pa_sinks_process.communicate()
@@ -94,6 +119,7 @@ def getCasaStreamSinkId():
                 return int(tokens[0])
  
 
+# Set every input found to send sound to casastream's sink
 def redirectAllInputs():
     # First, get the id of the casastream RTP sink
     sink_id = getCasaStreamSinkId()    
@@ -113,6 +139,8 @@ def redirectAllInputs():
         subprocess.Popen(["pactl","move-sink-input",str(i),str(sink_id)])
 
 
+# Set every provided input ID to send sound to casastream's sink.
+# Any input NOT provided will be redirected away from casastream.
 def redirectInputs(inputs_to_redirect):
     # First, get the id of the casastream RTP sink
     sink_id = getCasaStreamSinkId()  
@@ -136,6 +164,7 @@ def redirectInputs(inputs_to_redirect):
             subprocess.Popen(["pactl","move-sink-input",str(input['id']),str(standard_sink)])
 
 
+# Get a list of dictionaries representing information on each sound source input
 def getAllInputs():
     pa_sinks_process = subprocess.Popen(["pactl","list","sink-inputs"], stdout = subprocess.PIPE)
     out1, err1 = pa_sinks_process.communicate()
@@ -172,10 +201,32 @@ def getAllInputs():
 
     return inputs
                 
-    
-   
+def removeAllCasastreamModules():
+    pa_modules = subprocess.Popen(["pactl","list","short","modules"], stdout = subprocess.PIPE)
+    out1, err1 = pa_modules.communicate()
+    lines = out1.split("\n")
+    for line in lines:
+        tokens = line.split()
+        if len(tokens) > 0:
+            id = int(tokens[0])
+            for token in tokens:
+                if "casastream" in token:
+                    subprocess.Popen(["pactl","unload-module",str(id)])
+
+
+ 
+# Check if the system is enabled or not. Casastream is flagged as enabled when the 
+# PA modules are loaded and the VLC encoder is activated.
 def isEnabled():
-    return os.path.isfile('modules.txt')
+    config = getConfig()
+    if config['enabled'] == 1:
+        return True
+    return False
+
+
+#
+# ROUTING METHODS
+#
 
 @app.route("/")
 def home():
@@ -215,6 +266,7 @@ def sort_inputs(inputs):
     for token in tokens:
         try:
             input_list.append(int(token))
+        # Exception thrown every time since inputs always ends with a ','
         except Exception:
             continue
     redirectInputs(input_list)
@@ -235,10 +287,8 @@ def disable_slave(host):
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
-    try:
-        os.remove("modules.txt")
-    except:
-        print "settings file does not exist" 
+    initConfig()
+    removeAllCasastreamModules()
     app.debug = True 
     port = 9878
     app.run(host='0.0.0.0', port=port)

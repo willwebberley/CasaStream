@@ -15,7 +15,8 @@
 *{
     margin:0px;
     padding:0px;
-    font-family:'Helvetica-Neue','Helvetica','Sans-serif';
+    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
+
 }
 
 body, html{
@@ -45,12 +46,20 @@ p{
 }
 
 h2{
+    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
     color:#aaa;
     padding-bottom:15px;
     border-bottom:2px solid #00BFFF;
     font-weight:lighter;
 }
 
+h3{
+    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
+    color:#aaa;
+    padding-bottom:15px;
+    font-weight:lighter;
+    font-size:18px;
+}
 /* HEADER STUFF */
 
 #title{
@@ -93,12 +102,6 @@ section.half{
     display:inline;
 }
 
-section h2{
-    font-family: 'PT Sans', Verdana, 'Helvetica Neue', Helvetica, Sans-serif;
-    margin-top:10px;
-    margin-bottom:20px;
-}
-
 #status button{
     float:right;
 }
@@ -113,19 +116,42 @@ section h2{
 
 .slave{
     display:block;
-    border-bottom:1px solid #ccc;
+    border:1px solid #ccc;
+    border-radius:6px;
     margin-bottom:10px;
     padding:5px;
-    background:rgba(20,20,20,0.6);
+/*    background:rgba(20,20,20,0.6);*/
     clear:both;
 }
 
-.slave button{
+.slave .settings{
     float:right;
+    clear:right;
+    padding-left:10px;
+    border-left:1px solid #ccc;
 }
+
+.slave .toggle{
+    width:100px;
+    margin-bottom:10px;
+    position:relative;
+    margin-left:0px;
+}
+
+.slave button{
+    width:100px;
+    color:white;
+    border:1px solid #ccc;
+    background:rgba(0,0,0,0.7);
+    cursor:pointer;
+    font-size:17px;
+    position:relative;
+}
+.slave button:hover{color:#00BFFF;}
 
 .slave p{
     float:left;
     color:#00BFFF;
+    position:relative;
 }
 
