@@ -18,7 +18,7 @@ TL;DR
 * run `$ python2 server.py`
 * Navigate to [localhost:9878](http://localhost:9878) (or master's network address) and enable CasaStream
 * Play your music!
-* Enable from the master's web interface and select desired sound sources
+* Use the master's web interface to enable slaves and select desired sound sources
 
 
 
