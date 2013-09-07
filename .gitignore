@@ -1,3 +1,4 @@
 *.pyc
 *.swp
 *.txt
+config.json
