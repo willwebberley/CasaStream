@@ -14,8 +14,8 @@
 # http://www.gnu.org/licenses/gpl.html
 
 
-from flask import Flask, url_for, render_template, request, session, escape, redirect, g
-import os, subprocess, signal, json
+from flask import Flask
+import os, subprocess, signal, json, getpass
 
 app = Flask(__name__)
 config_file = "config.json"
@@ -94,7 +94,8 @@ def info():
     sys_info = os.uname()
     name = config['name']
     enabled = isEnabled()
-    return json.dumps({"zone":name,"enabled":enabled,"info":sys_info,"version":version})
+    user = getpass.getuser()
+    return json.dumps({"zone":name,"enabled":enabled,"info":sys_info,"version":version,"user":user})
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':

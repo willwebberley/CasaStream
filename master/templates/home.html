@@ -5,15 +5,14 @@
         <title>CasaStream</title>
         <link rel="stylesheet" href="/static/css/main.css">
         <link rel="stylesheet" href="/static/css/toggle-switch.css">
+        <link rel="stylesheet" href="/static/css/jquery-ui.css">
     </head>
     <body>
         <header>
             <p id="title">CasaStream</p>
         </header>
         
-        <div id="main">
-
-        
+        <div id="main"> 
             
             <section class="half" id="settings">
                 <label id="master-enable" class="checkbox blue toggle android" onclick="">
@@ -26,28 +25,30 @@
                 </label>
                    
                 <h3 id="info">Please wait while the system gets started.</h3>
+
+                <p>Broadcast volume</p>
+                <div id="slider"></div>
             </section>
 
             <section class="half">
                 <h2>Configuration info</h2>
                 <p><span class="label">CS version</span><span id="m_version"></span></p>
                 <p><span class="label">Master IP</span><span id="m_ip"></span></p>
-                <p><span class="label">Scanning on</span><span id="m_stub"></span><button style="float:right" id="stub_update">change</button><button style="float:right" id="stub_default">default</button></p>
+                <p><span class="label">Scanning on</span><span id="m_stub"></span></p>
+                <button id="stub_update">change scan</button><button id="stub_default">defaults</button></p>
             </section>
 
             <div style="clear:both"></div>
 
             <section class="half">
-                <h2>CasaStream zones</h2>
-                <p>Select zones to receive CasaStream's broadcast. <span class="link" id="rescan">Re-scan</span></p>
+                <h2>Available zones <span class="link" id="rescan">Re-scan</span></h2>
                 <ul id="slaves">
                     <p><i>Searching for zones...</i></p> 
                 </ul>
             </section>
 
             <section class="half">
-                <h2>Sound sources</h2>
-                <p>Select applications you want CasaStream to broadcast. Applications can take up to 10 seconds to be discovered by CasaStream.</p>
+                <h2>Available audio sources</h2>
                 <ul id="sources">
                     <p><i>Searching for sources...</i></p>
                 </ul>
@@ -56,6 +57,7 @@
 
         </div>
         <script src="/static/js/jquery.js"></script>
+        <script src="/static/js/jquery-ui.js"></script>
         <script type="text/javascript">
 
         var enabled = false;
@@ -63,8 +65,34 @@
         var custom_stub = "";
         var default_stub = "";
         
+        $(function() {
+             $("#slider").slider({min:0,max:100,change:masterSliderUpdated});
+             $("#slider").slider("disable");
+             var volume = $("#slider").slider("value");
+             $("#master-volume").html(volume+"%");
+        });
+
+        function generateSourceSliders(){
+             $(".source-slider").slider({min:0,max:100,change:sourceSliderUpdated});
+             $(".source-slider").slider("value", 90);
+        }
+
+        function masterSliderUpdated(event, ui){
+            event.stopImmediatePropagation();
+            var volume = $("#slider").slider("value");
+            $("#master-volume").html(volume+"%");
+            set_master_volume(volume);
+        }
+
+        function sourceSliderUpdated(event, ui){
+           event.stopImmediatePropagation();
+           var source_id = $(this).attr("rel"); 
+           var volume = $(this).slider("value");
+           set_source_volume(source_id, volume);
+        }
  
         function loadListeners(){
+
            $("#master_toggle").click(function(event){
                 event.stopImmediatePropagation();
                 $("#master-enable").stop().animate({opacity:'0.3'},300);
@@ -104,10 +132,24 @@
                 var name=prompt("Enter a new name for this zone:","");
                 var slave = $(this).attr("rel");
                 rename_slave(slave, name);
-            });   
+            });  
+            $(".show-details").click(function(event){
+               event.stopImmediatePropagation();
+               var mparent = $(this).parent(".settings");
+               var details = mparent.siblings(".slave-details");
+               details.stop().slideToggle();
+
+            });
              $("#stub_update").click(function(event){
                 event.stopImmediatePropagation();
                 custom_stub = prompt("Enter a new scan block - e.g. to scan for devices between 192.168.0.1 and 192.168.0.30 enter '192.168.0.1-30'","");
+                
+                var exp=new RegExp(/^(\d|[1-9]\d|1\d\d|2([0-4]\d|5[0-5]))\.(\d|[1-9]\d|1\d\d|2([0-4]\d|5[0-5]))\.(\d|[1-9]\d|1\d\d|2([0-4]\d|5[0-5]))\.(\d|[1-9]\d|1\d\d|2([0-4]\d|5[0-5]))\-[0-9][0-9]?$/);
+                var match = exp.test(custom_stub);
+                if(match == false){
+                    alert("The address range you entered is invalid. Please try again.");
+                    return;
+                }
                 custom_stub_selected = true;
                 $("#m_stub").html(custom_stub);
                 scan();
@@ -184,28 +226,37 @@
                 $("#master-enable").stop().animate({opacity:'1.0'}, 300);
                 if(data['enabled'] == true){
                     enabled = true;
+                    $("#slider").slider("enable");
+                    $("#slider").slider("value",data['casastream_volume']);
                     $("#master_toggle").attr('checked','checked');
                     $("#info").html('CasaStream is now broadcasting over the network.');
-                    $("#sources").html("<p><i>No sources could be found. Ensure your application is running and that PulseAudio can detect it!</i></p>");
+                    $("#sources").html("<p><i>No sound sources could be found. Ensure your application is running and that PulseAudio can detect it.</i></p>");
                     s = "";
                     for(var i = 0; i < data['inputs'].length; i++){
-                        s = s + '<li class="slave"><p>'+data['inputs'][i]['name']+'</p>';
+                        s = s + '<li class="slave">';
                         s = s + '<label class="checkbox toggle android" style="width:100px;float:right;" onclick=""><input type="checkbox" class="toggle_source"';
                         if(data['inputs'][i]['casastream'] == true){		
                             s = s + 'checked '; 
                         }
                         s = s + 'rel="'+data['inputs'][i]['id']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';
-                                s = s + '<div style="clear:both"></div></li>';
+                        s = s + '<p style="float:left">'+data['inputs'][i]['name']+'</p>';
+                        s = s + '<div style="clear:both"></div><div class="source-slider" id="slider_'+data['inputs'][i]['id']+'" rel="'+data['inputs'][i]['id']+'"></div>';
+                        s = s + '<div style="clear:both"></div></li>';
+                        
                     }
                     if(data['inputs'].length > 0){
                         $("#sources").html(s);
+                        for(var i = 0; i < data['inputs'].length; i++){
+                            $("#slider_"+data['inputs'][i]['id']).slider({max:100,min:0,value:data['inputs'][i]['volume'],change:sourceSliderUpdated});
+                        }
                     }
                 }
                 if(data['enabled'] == false){
+                    $("#slider").slider("disable");
                     enabled = false;
                     $("#status").html('<span class="offline">offline</span><button id="enable">Start</button>');           
                     $("#info").html('To start streaming over the network, please enable CasaStream.');
-                    $("#sources").html('<p><i>Please enable CasaStream to detect sources.</i></p>');
+                    $("#sources").html('<p><i>Please enable CasaStream to detect audio sources.</i></p>');
                 }
                 loadListeners();
             }
@@ -214,6 +265,7 @@
         function scan(data){
             if(data == undefined){
                 $("#slaves").html('<p><i>Searching for zones...</i></p>');
+                $("#rescan").html('');
                 if(custom_stub_selected == true){    
                     send_command("/scan/"+custom_stub+"/", scan);
                 }
@@ -222,10 +274,9 @@
                 }
             }
             else{
-                $("#slaves").html('<p><i>No zones have been found. Ensure slaves servers are running and try to re-scan.</i></p>');
+                $("#slaves").html('<p><i>No zones have been found. Ensure your slave servers are running and try to re-scan.</i></p>');
                 s = "";
                 for(var i = 0; i < data.length; i++){
-                    console.log(data[i]);
                     s = s + '<li class="slave">';
                     var state = data[i]['enabled'];
                     s = s + '<div class="settings">'; 
@@ -235,11 +286,16 @@
                     if(state == false){
                         s = s + '<label class="checkbox toggle android" onclick=""><input type="checkbox" class="toggle_slave" rel="'+data[i]['host']+'"><span><span>Off</span><span>On</span></span><a class="slide-button"></a></label>';    
                     }
-                    s = s + '<button class="rename" rel="'+data[i]['host']+'">rename</button></div>';
+                    s = s + '<button class="rename" rel="'+data[i]['host']+'">rename</button><button class="show-details">details</button></div>';
                     s = s + '<h3>'+data[i]['zone'].replace("~"," ")+'</h3>';
+                    s = s + '<div style="clear:both"></div>';
+                    s = s + '<div class="slave-details">';
                     s = s + '<p><span class="label">CS version</span>'+data[i]['version']+'</p>';
                     s = s + '<p><span class="label">Slave IP</span>'+data[i]['host']+'</p>';
-                    s = s + '<p><span class="label">System</span>'+data[i]['info'][1]+' on '+data[i]['info'][0]+'</p>';
+                    s = s + '<p><span class="label">Host name</span>'+data[i]['info'][1]+'</p>';
+                    s = s + '<p><span class="label">Username</span>'+data[i]['user']+'</p>';
+                    s = s + '<p><span class="label">System</span>'+data[i]['info'][0]+'  ('+data[i]['info'][2]+')</p>';
+                    s = s + '</div>';
                     s = s + '</span></p><div style="clear:both"></div></li>';
                 }
                 if(data.length > 0){
@@ -248,6 +304,14 @@
                 $("#rescan").html('Re-scan');
                 loadListeners();
             }
+        }
+
+        function set_master_volume(volume){
+            send_command("/master-volume/"+volume);
+        }
+
+        function set_source_volume(source, volume){
+            send_command("/source-volume/"+source+"/"+volume);
         }
 
         function enable_slave(host){

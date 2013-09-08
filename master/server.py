@@ -15,7 +15,7 @@
 
 
 
-from flask import Flask, url_for, render_template, request, session, escape, redirect, g
+from flask import Flask, render_template
 import os, nmap, subprocess, signal, urllib2, json, socket
 
 app = Flask(__name__)
@@ -23,10 +23,13 @@ config_file = "config.json"
 version = 1.0
 
 
-# Get the address representing the master server on the local network
+# Get the address representing the master server on the local network. Requires an internet connection
 def getAddress():
-    ip =  socket.gethostbyname(socket.getfqdn())
-    return ip
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("example.com",80))
+    ip_address = s.getsockname()[0]
+    s.close()
+    return ip_address
 
 # Get the search stub of the address (i.e. '192.168.1.7' will return '192.168.1.')
 def getAddressStub():
@@ -78,7 +81,6 @@ def getIds():
  
 # Perform a scan over the network for slaves. Returns list of a dictionary of slaves
 def search(stub):
-    print "scanning on",stub
     nm = nmap.PortScanner()
     nm.scan(hosts=stub, arguments='-p 9875')
    
@@ -93,13 +95,8 @@ def search(stub):
             response = urllib2.urlopen('http://'+host+":"+str(9875)+"/info")
             zone = response.read()
             zone_info = json.loads(zone)
-            zone_dict = {}
-            zone_dict['host'] = host
-            zone_dict['zone'] = zone_info['zone']
-            zone_dict['enabled'] = zone_info['enabled']
-            zone_dict['info'] = zone_info['info'] 
-            zone_dict['version'] = zone_info['version']
-            zone_list.append(zone_dict)
+            zone_info['host'] = host
+            zone_list.append(zone_info)
         except Exception as e:
             print "error:",host, e
     return zone_list
@@ -117,9 +114,10 @@ def startStream():
     # Use VLC to encode stream to MP3 and then broadcast through RTP
     start_vlc_encoder = subprocess.Popen(['cvlc', 'rtp://@127.0.0.1:46998', ':sout=#transcode{acodec=mp3,ab=256,channels=2}:duplicate{dst=rtp{dst=225.0.0.1,mux=ts,port=12345}}'])
     pid = start_vlc_encoder.pid
-    
-    print "started PA modules and encoder"
 
+    # Set initial volume to 90%:
+    setMasterVolume(90)
+        
     # Save PA module IDs and the VLC process ID (so they can be killed if CasaStream is disabled)
     saveIds(out, out2, pid)
         
@@ -149,6 +147,25 @@ def getCasaStreamSinkId():
             if token == 'casastream':
                 return int(tokens[0])
  
+
+def getCasaStreamVolume():
+    pa_sinks_process = subprocess.Popen(["pactl","list","sinks"], stdout = subprocess.PIPE)
+    out1, err1 = pa_sinks_process.communicate()
+    lines = out1.split("\n")
+    casastream_found = False
+    for line in lines:
+        tokens = line.split()
+        for token in tokens:
+            if "casastream" in token:
+                casastream_found = True
+        if casastream_found == True and "Volume:" in line:
+            volume = tokens[2]
+            try:
+                return int(volume.replace("%",""))
+            except:
+                continue
+    return 90
+
 
 # Set every input found to send sound to casastream's sink
 def redirectAllInputs():
@@ -188,10 +205,8 @@ def redirectInputs(inputs_to_redirect):
     for input in all_inputs:
         id = input['id']
         if id in inputs_to_redirect:
-	    print "moving input "+str(input)+" to sink "+str(sink_id)
             subprocess.Popen(["pactl","move-sink-input",str(input['id']),str(sink_id)])
         else:
-            print "moving input "+str(input)+" to sink "+str(standard_sink)
             subprocess.Popen(["pactl","move-sink-input",str(input['id']),str(standard_sink)])
 
 
@@ -205,23 +220,26 @@ def getAllInputs():
     current_correct_sink = False
     sink_id = getCasaStreamSinkId()
     current_sink_id = 1
-    print "casastream's sink ID:",sink_id
-
+    current_volume = 0
     for line in lines:
         if "Sink Input" in line:
             tokens = line.split()
             for token in tokens:
                 if "#" in token:            
                     current_id = int(token.replace("#",""))
+        if "Volume:" in line:
+            tokens = line.split()
+            vol_str = tokens[2]
+            current_volume = int(vol_str.replace("%",""))
         if "application.name" in line:
             tokens = line.split('"')
             name = tokens[1].replace('"','')
             if not "vlc" in name.lower():
                 print name+"'s sink ID:",current_sink_id
                 if current_sink_id == sink_id:
-	                inputs.append({"id":current_id,"name":name,"casastream":True})
+	                inputs.append({"id":current_id,"name":name,"casastream":True,"volume":current_volume})
                 else:
-                         inputs.append({"id":current_id,"name":name,"casastream":False})
+                    inputs.append({"id":current_id,"name":name,"casastream":False,"volume":current_volume})
         if "Sink: " in line:
             tokens = line.split()
             current_sink_id = int(tokens[1])
@@ -244,7 +262,12 @@ def removeAllCasastreamModules():
                 if "casastream" in token:
                     subprocess.Popen(["pactl","unload-module",str(id)])
 
+def setMasterVolume(volume):
+    sink_id = getCasaStreamSinkId()
+    subprocess.Popen(["pactl","set-sink-volume",str(sink_id),str(volume)+"%"])
 
+def setSourceVolume(source_id, volume):
+    subprocess.Popen(["pactl","set-sink-input-volume",str(source_id),str(volume)+"%"])
  
 # Check if the system is enabled or not. Casastream is flagged as enabled when the 
 # PA modules are loaded and the VLC encoder is activated.
@@ -289,7 +312,8 @@ def status():
     inputs = getAllInputs()
     address_stub = getAddressStub()
     address = getAddress()
-    return json.dumps({'enabled':enabled, "inputs":inputs, "address":address,"stub":address_stub,"version":version})
+    casastream_volume = getCasaStreamVolume()
+    return json.dumps({'enabled':enabled, "inputs":inputs, "address":address,"stub":address_stub,"version":version,"casastream_volume":casastream_volume})
 
 @app.route("/sort-inputs/")
 def remove_inputs():
@@ -310,6 +334,15 @@ def sort_inputs(inputs):
     redirectInputs(input_list)
     return json.dumps({'success': 'true'})
 
+@app.route("/master-volume/<volume>/")
+def master_volume(volume):
+    setMasterVolume(volume)
+    return json.dumps({'success':'true'})
+
+@app.route("/source-volume/<source>/<volume>/")
+def source_volume(source, volume):
+    setSourceVolume(source, volume)
+    return json.dumps({'success':'true'})
 
 @app.route("/enable-slave/<host>/")
 def enable_slave(host):
