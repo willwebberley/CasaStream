@@ -16,10 +16,24 @@
 
 
 from flask import Flask, url_for, render_template, request, session, escape, redirect, g
-import os, nmap, subprocess, signal, urllib2, json
+import os, nmap, subprocess, signal, urllib2, json, socket
 
 app = Flask(__name__)
 config_file = "config.json"
+version = 1.0
+
+
+# Get the address representing the master server on the local network
+def getAddress():
+    ip =  socket.gethostbyname(socket.getfqdn())
+    return ip
+
+# Get the search stub of the address (i.e. '192.168.1.7' will return '192.168.1.')
+def getAddressStub():
+    ip_reversed = getAddress()[::-1]
+    partitioned = ip_reversed.partition('.')[2]
+    return partitioned[::-1]+"."
+    
 
 # Load the configuration from file
 def getConfig():
@@ -63,9 +77,10 @@ def getIds():
     return ((config['pa_sink_id'], config['pa_rtp_id'], config['vlc_pid']))
  
 # Perform a scan over the network for slaves. Returns list of a dictionary of slaves
-def search():
+def search(stub):
+    print "scanning on",stub
     nm = nmap.PortScanner()
-    nm.scan(hosts='192.168.1.0-20', arguments='-p 9875')
+    nm.scan(hosts=stub, arguments='-p 9875')
    
     up_hosts = [] 
     for h in nm.all_hosts():
@@ -83,6 +98,7 @@ def search():
             zone_dict['zone'] = zone_info['zone']
             zone_dict['enabled'] = zone_info['enabled']
             zone_dict['info'] = zone_info['info'] 
+            zone_dict['version'] = zone_info['version']
             zone_list.append(zone_dict)
         except Exception as e:
             print "error:",host, e
@@ -112,9 +128,7 @@ def endStream():
     # Retrieve PA module IDs and the VLC process ID
     mod1, mod2, pid = getIds()
     
-    print "pactl unload-module "+str(mod1)
-    print "pactl unload-module "+str(mod2)    
-    # Kill PA modules
+   # Kill PA modules
     subprocess.Popen(["pactl","unload-module",str(mod1)])
     subprocess.Popen(["pactl","unload-module",str(mod2)])
 
@@ -251,7 +265,12 @@ def home():
 
 @app.route("/scan/", methods=["POST", "GET"])
 def scan():
-    zones = search()
+    zones = search(getAddressStub()+"0-30")
+    return json.dumps(zones)
+
+@app.route("/scan/<stub>/", methods=["POST", "GET"])
+def scan_stub(stub):
+    zones = search(stub)
     return json.dumps(zones)
 
 @app.route("/start/", methods=["POST", "GET"])
@@ -268,7 +287,9 @@ def stop():
 def status():
     enabled = isEnabled()
     inputs = getAllInputs()
-    return json.dumps({'enabled':enabled, "inputs":inputs})
+    address_stub = getAddressStub()
+    address = getAddress()
+    return json.dumps({'enabled':enabled, "inputs":inputs, "address":address,"stub":address_stub,"version":version})
 
 @app.route("/sort-inputs/")
 def remove_inputs():

@@ -19,6 +19,8 @@ import os, subprocess, signal, json
 
 app = Flask(__name__)
 config_file = "config.json"
+version = 1.0
+
 
 # Load the configuration from file
 def getConfig():
@@ -92,7 +94,7 @@ def info():
     sys_info = os.uname()
     name = config['name']
     enabled = isEnabled()
-    return json.dumps({"zone":name,"enabled":enabled,"info":sys_info})
+    return json.dumps({"zone":name,"enabled":enabled,"info":sys_info,"version":version})
 
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':

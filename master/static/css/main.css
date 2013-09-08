@@ -74,6 +74,24 @@ h3{
 
 /* CLASS STYLES */
 
+.label{
+    width:100px;
+    color:#00BFFF;
+    float:left;
+}
+
+button{
+    padding:2px;
+    color:#aaa;
+    border:1px solid #ccc;
+    background:rgba(0,0,0,0.7);
+    cursor:pointer;
+    font-size:17px;
+    position:relative;
+    text-transform:uppercase;
+}
+button:hover{color:#00BFFF;}
+
 .link{
     color:#00BFFF;
     cursor:pointer;
@@ -140,15 +158,7 @@ section.half{
 
 .slave button{
     width:100px;
-    color:#aaa;
-    border:1px solid #ccc;
-    background:rgba(0,0,0,0.7);
-    cursor:pointer;
-    font-size:17px;
-    position:relative;
-    text-transform:uppercase;
-}
-.slave button:hover{color:#00BFFF;}
+ }
 
 .slave h3{
     margin-bottom:5px;

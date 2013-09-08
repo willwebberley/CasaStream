@@ -15,7 +15,7 @@
 
         
             
-            <section id="settings">
+            <section class="half" id="settings">
                 <label id="master-enable" class="checkbox blue toggle android" onclick="">
                     <input type="checkbox" id="master_toggle">
                         <span>            
@@ -27,6 +27,15 @@
                    
                 <h3 id="info">Please wait while the system gets started.</h3>
             </section>
+
+            <section class="half">
+                <h2>Configuration info</h2>
+                <p><span class="label">CS version</span><span id="m_version"></span></p>
+                <p><span class="label">Master IP</span><span id="m_ip"></span></p>
+                <p><span class="label">Scanning on</span><span id="m_stub"></span><button style="float:right" id="stub_update">change</button><button style="float:right" id="stub_default">default</button></p>
+            </section>
+
+            <div style="clear:both"></div>
 
             <section class="half">
                 <h2>CasaStream zones</h2>
@@ -50,7 +59,10 @@
         <script type="text/javascript">
 
         var enabled = false;
-
+        var custom_stub_selected = false;
+        var custom_stub = "";
+        var default_stub = "";
+        
  
         function loadListeners(){
            $("#master_toggle").click(function(event){
@@ -93,7 +105,20 @@
                 var slave = $(this).attr("rel");
                 rename_slave(slave, name);
             });   
-
+             $("#stub_update").click(function(event){
+                event.stopImmediatePropagation();
+                custom_stub = prompt("Enter a new scan block - e.g. to scan for devices between 192.168.0.1 and 192.168.0.30 enter '192.168.0.1-30'","");
+                custom_stub_selected = true;
+                $("#m_stub").html(custom_stub);
+                scan();
+            }); 
+            $("#stub_default").click(function(event){
+                event.stopImmediatePropagation();
+                custom_stub_selected = false;
+                custom_stub = "";
+                $("#m_stub").html(default_stub+"*");
+                scan();
+            });
         }
 
         function send_command(url, func){
@@ -143,8 +168,19 @@
         }       
 
         function get_status(data){  
-            if(data == undefined){send_command("/status/", get_status);}
+            if(data == undefined){
+                send_command("/status/", get_status);
+            }
             else{
+                $("#m_ip").html(data['address']);
+                if(custom_stub_selected == true){
+                    $("#m_stub").html(custom_stub);
+                }
+                else{
+                    $("#m_stub").html(data['stub']+"*");
+                }
+                default_stub = data['stub'];
+                $("#m_version").html(data['version']);
                 $("#master-enable").stop().animate({opacity:'1.0'}, 300);
                 if(data['enabled'] == true){
                     enabled = true;
@@ -178,7 +214,12 @@
         function scan(data){
             if(data == undefined){
                 $("#slaves").html('<p><i>Searching for zones...</i></p>');
-                send_command("/scan/", scan);
+                if(custom_stub_selected == true){    
+                    send_command("/scan/"+custom_stub+"/", scan);
+                }
+                else{
+                    send_command("/scan/", scan);
+                }
             }
             else{
                 $("#slaves").html('<p><i>No zones have been found. Ensure slaves servers are running and try to re-scan.</i></p>');
@@ -196,7 +237,10 @@
                     }
                     s = s + '<button class="rename" rel="'+data[i]['host']+'">rename</button></div>';
                     s = s + '<h3>'+data[i]['zone'].replace("~"," ")+'</h3>';
-                    s = s + '<p><span class="info-label">'+data[i]['info'][1]+'</span> ('+data[i]['info'][0]+' '+data[i]['info'][2]+') - <span class="info-label">'+data[i]['host']+'</span></p><div style="clear:both"></div></li>';
+                    s = s + '<p><span class="label">CS version</span>'+data[i]['version']+'</p>';
+                    s = s + '<p><span class="label">Slave IP</span>'+data[i]['host']+'</p>';
+                    s = s + '<p><span class="label">System</span>'+data[i]['info'][1]+' on '+data[i]['info'][0]+'</p>';
+                    s = s + '</span></p><div style="clear:both"></div></li>';
                 }
                 if(data.length > 0){
                     $("#slaves").html(s);
