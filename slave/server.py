@@ -15,12 +15,20 @@
 
 
 from flask import Flask
-import os, subprocess, signal, json, getpass
+import os, subprocess, signal, json, getpass, time
+from threading import Thread
 
 app = Flask(__name__)
 config_file = "config.json"
 version = 1.0
 
+class StopStarter(Thread):
+    def run(self):
+        if isEnabled():
+             print "restarting..."
+             stop()
+             start()
+        time.sleep(60*4)       
 
 # Load the configuration from file
 def getConfig():
@@ -105,4 +113,5 @@ if __name__ == '__main__':
         print "pid.txt does not exist"
     app.debug = True 
     port = 9875
+    StopStarter().start()
     app.run(host='0.0.0.0', port=port)
