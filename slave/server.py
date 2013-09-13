@@ -22,13 +22,6 @@ app = Flask(__name__)
 config_file = "config.json"
 version = 1.0
 
-class StopStarter(Thread):
-    def run(self):
-        if isEnabled():
-             print "restarting..."
-             stop()
-             start()
-        time.sleep(60*4)       
 
 # Load the configuration from file
 def getConfig():
@@ -81,11 +74,13 @@ def stop():
     return "unable to stop"
 
 @app.route("/start/")
-def start():
+def start(restarter = True):
     if not isEnabled():
         process = subprocess.Popen(["cvlc", "rtp://@225.0.0.1:12345"])
         pid = process.pid
         saveId(pid)
+        if restarter == True:
+            Thread(target=stopStarter).start()
         return "started"
     return "unable to start"
 
@@ -105,6 +100,14 @@ def info():
     user = getpass.getuser()
     return json.dumps({"zone":name,"enabled":enabled,"info":sys_info,"version":version,"user":user})
 
+def stopStarter():
+    while isEnabled() == True:
+        print "restarting..."
+        stop()
+        start(restarter = False)
+        time.sleep(4*60)      
+
+
 # Main code (if invoked from Python at command line for development server)
 if __name__ == '__main__':
     try:
@@ -113,5 +116,4 @@ if __name__ == '__main__':
         print "pid.txt does not exist"
     app.debug = True 
     port = 9875
-    StopStarter().start()
     app.run(host='0.0.0.0', port=port)
